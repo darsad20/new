@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفاصيل المنشآت</title>
+    
+    <!-- مكتبات خارجية -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <img src="images/logo.png" alt="شعار وزارة الأوقاف والإرشاد" class="logo">
+        </div>
+    </header>
+
+    <main>
+        <h1>تفاصيل المنشآت</h1>
+        <input type="text" id="searchInput" placeholder="أدخل اسم المنشأة" aria-label="بحث عن المنشأة">
+        <div class="action-buttons">
+            <button onclick="searchCompany()" title="ابحث عن المنشأة">
+                <i class="fas fa-search"></i> بحث
+            </button>
+            <button id="btnReset" onclick="resetSearch()" title="إعادة تعيين">
+                <i class="fas fa-undo"></i> إعادة تعيين
+            </button>
+            <button id="btnPrint" onclick="printResults()" title="طباعة النتائج">
+                <i class="fas fa-print"></i> طباعة
+            </button>
+        </div>
+        <div id="progressBar" class="progress" style="display: none;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%;"></div>
+        </div>
+        <div id="results"></div>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 وزارة الأوقاف والإرشاد. جميع الحقوق محفوظة.</p>
+        <p>الإدارة العامة للنظم والمسار الإلكتروني</p>
+    </footer>
+
+    <!-- مكتبات JavaScript الخارجية -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="js/scripts.js" defer></script>
+</body>
+</html>
