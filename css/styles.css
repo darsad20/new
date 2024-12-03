@@ -4,14 +4,11 @@
 body {
     font-family: 'Tajawal', sans-serif;
     direction: rtl;
-    background: linear-gradient(to bottom, #f5f5f5, #ffffff);
-    color: #222;
-    max-width: 1000px;
-    margin: 5% auto;
-    padding: 20px;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
-    border-radius: 15px;
-    text-align: center;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 /* شعار */
@@ -29,57 +26,15 @@ body {
     transform: scale(1.1);
 }
 
-/* عنوان الصفحة */
-h1 {
-    margin-bottom: 20px;
-    color: #111;
-    font-size: 2.2em;
-    font-weight: bold;
-}
-
-/* حقل الإدخال */
-input[type="text"] {
-    max-width: 400px;
-    height: 45px;
-    text-align: center;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: box-shadow 0.3s ease, transform 0.3s ease;
-    padding: 0 15px;
-    font-size: 1em;
-}
-
-input:focus {
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    transform: scale(1.02);
-    outline: none;
-    border-color: #007bff;
-}
-
 /* أزرار العمليات */
-.action-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 20px;
-}
-
 button {
-    padding: 12px 25px;
-    background-color: #007bff;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    font-size: 1em;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 button:hover {
-    background-color: #0056b3;
     transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
 }
 
 button:active {
@@ -87,174 +42,126 @@ button:active {
     box-shadow: none;
 }
 
-/* شريط التقدم */
-#progressBar {
-    margin: 15px auto;
-    width: 80%;
-    height: 10px;
+/* شريط التحميل الاحترافي */
+#loadingBarContainer {
+    display: none;
+    position: relative;
+    height: 5px;
     background-color: #f3f3f3;
     border-radius: 5px;
+    margin: 20px auto;
     overflow: hidden;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.progress-bar {
+#loadingBar {
+    position: absolute;
     height: 100%;
-    background: linear-gradient(90deg, #007bff, #0056b3);
-    transition: width 0.3s ease;
+    width: 0;
+    background: linear-gradient(90deg, #007bff, #00bfff);
+    box-shadow: 0 3px 6px rgba(0, 0, 255, 0.5);
+    border-radius: 5px;
+    transition: width 0.5s ease-in-out;
 }
 
-/* بطاقة النتيجة */
+/* تحسين عرض البطاقات */
+.result-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 50vh; /* يضمن أن حاوية البطاقة تكون بارتفاع مناسب في الشاشة */
+    width: 100%;
+}
+
 .result-card {
-    background: #ffffff;
-    border: 1px solid #ddd;
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1); /* الشفافية لإضفاء المظهر الزجاجي */
+    border: 1px solid rgba(255, 255, 255, 0.3); /* حدود زجاجية خفيفة */
+    backdrop-filter: blur(10px); /* تمويه الزجاج */
+    -webkit-backdrop-filter: blur(10px); /* دعم لتمويه الزجاج في متصفحات الويب */
+    border-radius: 15px;
     padding: 20px;
-    margin-bottom: 15px;
+    max-width: 600px;
+    width: auto;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    text-align: right;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-align: center; /* توسيط النص */
+    margin: auto;
 }
 
 .result-card:hover {
     transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
-.result-card h3 {
-    font-size: 1.7em;
+/* عناصر البطاقة */
+.card-header h3 {
+    font-size: 1.8em;
     color: #333;
     margin-bottom: 10px;
-    font-weight: bold;
+    text-align: center; /* توسيط العنوان */
 }
 
-.result-card p {
-    font-size: 1em;
-    margin: 8px 0;
+.card-body p {
+    font-size: 1.1em;
+    margin: 10px 0;
     color: #555;
+    text-align: center; /* توسيط النص داخل الفقرات */
 }
 
-.result-card p i {
+.card-body p i {
     color: #007bff;
     margin-right: 5px;
 }
 
-/* الجدول */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    text-align: center;
+.card-footer {
+    margin-top: 15px;
+    text-align: center; /* توسيط الأزرار */
 }
 
-table, th, td {
-    border: 1px solid #ddd;
+.card-footer button {
+    margin: 5px;
 }
 
-th, td {
-    padding: 10px;
+/* مؤشر التحميل */
+#loadingSpinner i {
+    color: #007bff;
+    animation: spinner 1.5s linear infinite;
 }
 
-th {
+@keyframes spinner {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* تأثيرات الظهور التدريجي */
+.fade-in {
+    opacity: 0;
+    animation: fadeInAnimation 0.8s ease forwards;
+}
+
+@keyframes fadeInAnimation {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+/* تحسين رسائل Toastr */
+.toast-info {
     background-color: #007bff;
-    color: #fff;
-    font-weight: bold;
 }
 
-td {
-    color: #333;
+.toast-warning {
+    background-color: #ffc107;
 }
 
-tr:nth-child(even) {
-    background-color: #f9f9f9;
+.toast-error {
+    background-color: #dc3545;
 }
 
-/* نصوص التحذير */
-.text-danger {
-    color: #dc3545;
-    font-weight: bold;
+.toast {
+    animation: fadeInOut 1s;
 }
 
-/* مربع اختيار الصفوف */
-.rows-selector {
-    width: 80px;
-    margin: 10px auto;
-    padding: 5px;
-    font-size: 14px;
-    text-align: center;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-}
-
-/* تصميم زر التصدير مع القائمة المنسدلة */
-.dropdown-container {
-    position: relative;
-    display: inline-block;
-}
-
-.dropdown-menu {
-    display: none;
-    position: absolute;
-    left: 0;
-    top: 40px;
-    z-index: 1;
-    background-color: #fff;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    border-radius: 5px;
-    border: 1px solid #ddd;
-    width: 120px;
-    text-align: left;
-}
-
-.dropdown-menu button {
-    background: none;
-    border: none;
-    padding: 10px;
-    width: 100%;
-    text-align: left;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.dropdown-menu button:hover {
-    background-color: #f1f1f1;
-}
-
-.dropdown-container:hover .dropdown-menu {
-    display: block;
-}
-
-/* استجابة (Responsive) */
-@media (max-width: 768px) {
-    body {
-        padding: 10px;
-    }
-
-    input[type="text"] {
-        max-width: 100%;
-        height: 50px;
-        font-size: 1em;
-    }
-
-    .action-buttons {
-        flex-direction: column;
-        gap: 15px;
-    }
-
-    button {
-        width: 100%;
-        padding: 15px;
-    }
-
-    .result-card {
-        padding: 15px;
-    }
-
-    table, th, td {
-        font-size: 0.9em;
-    }
-
-    .rows-selector {
-        width: 100%;
-    }
+@keyframes fadeInOut {
+    0%, 100% { opacity: 0; }
+    10%, 90% { opacity: 1; }
 }

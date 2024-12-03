@@ -1,12 +1,12 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbw6aK6beyCK_YK15L-I37yuycBD-pH9DfAlILSpo4TylvIDoQ2HGJS-B983cv0XNdnzKQ/exec";
-
-let allHajData = []; // لتخزين جميع البيانات
-let currentRowsPerPage = 10; // عدد الصفوف الافتراضي
+const API_URL = "https://script.google.com/macros/s/AKfycbwzh4x-KGImuO0M_ckXGi9iCfBpBd4KpL1x2DNBmJRZRdVH2CMx8dT78otNIhpnBmoWug/exec";
+let controller;
 
 document.addEventListener('DOMContentLoaded', () => {
-    const searchInput = document.getElementById('searchInput');
+    // تفعيل ميزة الاقتراحات التلقائية
+    enableAutocomplete();
 
     // البحث عند الضغط على Enter
+    const searchInput = document.getElementById('searchInput');
     searchInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
             searchCompany();
@@ -19,170 +19,192 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function resetSearch() {
     document.getElementById('searchInput').value = '';
-    document.getElementById('results').innerHTML = '';
-    document.getElementById('hajResults').innerHTML = '';
-    document.getElementById('hajResultsControls').style.display = 'none';
-    document.getElementById('progressBar').style.display = 'none';
-    toastr.info('تمت إعادة تعيين البحث.');
+    document.querySelector('.result-container').innerHTML = ''; // مسح النتائج السابقة
+    document.getElementById('loadingBarContainer').style.display = 'none';
+    document.getElementById('loadingSpinner').style.display = 'none';
+    document.getElementById('noResultsMessage').style.display = 'none';
+    toastr.info('تمت إعادة تعيين البحث.', '', { "positionClass": "toast-top-center" });
+    if (controller) {
+        controller.abort();
+    }
 }
 
 /**
- * عرض شريط التقدم
+ * عرض شريط التحميل
  */
-function showProgressBar() {
-    const progressBar = document.getElementById('progressBar');
-    progressBar.style.display = 'block';
-    const bar = progressBar.querySelector('.progress-bar');
-    bar.style.width = '0%';
+function showLoadingBar() {
+    const loadingBarContainer = document.getElementById('loadingBarContainer');
+    const loadingBar = document.getElementById('loadingBar');
+    loadingBarContainer.style.display = 'block'; // عرض الشريط
+    loadingBar.style.width = '0%';
 
     let width = 0;
     const interval = setInterval(() => {
-        if (width >= 100) {
+        if (width >= 90) {
             clearInterval(interval);
         } else {
-            width += 10;
-            bar.style.width = `${width}%`;
+            width += 2; // زيادة سريعة في البداية حتى تصل إلى 90%
+            loadingBar.style.width = `${width}%`;
         }
-    }, 300);
+    }, 50);
 }
 
 /**
- * البحث عن المنشأة
+ * إكمال شريط التحميل عند انتهاء التحميل
+ */
+function completeLoadingBar() {
+    const loadingBar = document.getElementById('loadingBar');
+    loadingBar.style.width = '100%';
+    setTimeout(() => {
+        document.getElementById('loadingBarContainer').style.display = 'none';
+    }, 500);
+}
+
+/**
+ * إظهار رسالة "جاري التحميل"
+ */
+function showLoadingMessage() {
+    document.getElementById('loadingSpinner').classList.remove('hidden');
+}
+
+/**
+ * إخفاء رسالة "جاري التحميل"
+ */
+function hideLoadingMessage() {
+    document.getElementById('loadingSpinner').classList.add('hidden');
+}
+
+/**
+ * البحث عن المنشأة مع إمكانية التخزين المؤقت
  */
 async function searchCompany() {
     const searchInput = document.getElementById('searchInput').value.trim();
     if (!searchInput) {
-        toastr.warning('الرجاء إدخال اسم المنشأة.');
+        toastr.warning('الرجاء إدخال اسم المنشأة.', '', { "positionClass": "toast-top-center" });
         return;
     }
 
-    showProgressBar();
+    // التحقق من التخزين المؤقت
+    const cachedResult = getCachedResult(searchInput);
+    if (cachedResult) {
+        displayCompany(cachedResult);
+        return;
+    }
+
+    if (controller) {
+        controller.abort();
+    }
+    controller = new AbortController();
+    const signal = controller.signal;
+
+    showLoadingBar();
+    showLoadingMessage();
+    document.getElementById('searchButton').disabled = true;
 
     try {
-        const response = await fetch(`${API_URL}?companyName=${encodeURIComponent(searchInput)}&action=fetchCompanyData`);
+        const response = await fetch(`${API_URL}?companyName=${encodeURIComponent(searchInput)}`, { signal });
         if (!response.ok) {
-            console.error(`HTTP Error! Status: ${response.status}, Message: ${response.statusText}`);
             throw new Error(`خطأ في الاتصال بالسيرفر. الحالة: ${response.status}`);
         }
 
         const result = await response.json();
-        document.getElementById('progressBar').style.display = 'none';
+        completeLoadingBar();
+        hideLoadingMessage();
+        document.getElementById('searchButton').disabled = false;
 
-        if (result.error) {
-            document.getElementById('results').innerHTML = `<p class="text-danger">${sanitize(result.error)}</p>`;
-            toastr.warning('لم يتم العثور على نتائج.');
+        if (Array.isArray(result) && result.length > 0) {
+            displaySuggestions(result);
+        } else if (result.error) {
+            document.querySelector('.result-container').innerHTML = `<p class="text-danger">${sanitize(result.error)}</p>`;
+            toastr.warning(result.error, '', { "positionClass": "toast-top-center" });
         } else {
-            document.getElementById('results').innerHTML = `
-                <div class="result-card">
-                    <h3>${sanitize(result.name)}</h3>
-                    <p><i class="fas fa-chart-pie"></i> الحصة: ${sanitize(result.quota)}</p>
-                    <p><i class="fas fa-map-marker-alt"></i> المحافظة: ${sanitize(result.province)}</p>
-                    <p><i class="fas fa-envelope"></i> البريد الإلكتروني: ${sanitize(result.email)}</p>
-                    <p><i class="fas fa-phone-alt"></i> رقم التواصل: ${sanitize(result.contact)}</p>
-                    <button onclick="fetchHajData('${sanitize(result.name)}')" class="btn btn-primary mt-3">عرض بيانات الحجاج</button>
-                </div>
-            `;
+            if (result.length === 0) {
+                document.getElementById('noResultsMessage').classList.remove('hidden');
+            } else {
+                displayCompany(result);
+            }
         }
+
+        cacheResult(searchInput, result);
+
     } catch (error) {
-        document.getElementById('progressBar').style.display = 'none';
-        toastr.error(`حدث خطأ أثناء جلب البيانات: ${error.message}`);
+        document.getElementById('loadingBarContainer').style.display = 'none';
+        hideLoadingMessage();
+        document.getElementById('searchButton').disabled = false;
+
+        if (error.name === 'AbortError') {
+            toastr.info('تم إلغاء البحث.', '', { "positionClass": "toast-top-center" });
+        } else if (error.message.includes('Failed to fetch')) {
+            toastr.error('حدث خطأ أثناء الاتصال بالخادم، يرجى التحقق من اتصال الإنترنت.', '', { "positionClass": "toast-top-center" });
+        } else {
+            toastr.error(`حدث خطأ أثناء جلب البيانات: ${error.message}`, '', { "positionClass": "toast-top-center" });
+        }
     }
 }
 
 /**
- * جلب بيانات الحجاج
+ * تخزين نتيجة البحث في التخزين المؤقت
  */
-async function fetchHajData(companyName) {
-    try {
-        const response = await fetch(`${API_URL}?companyName=${encodeURIComponent(companyName)}&action=fetchHajData`);
-        if (!response.ok) throw new Error(`HTTP Error! Status: ${response.status}`);
-
-        const result = await response.json();
-        const hajResults = document.getElementById('hajResults');
-        const hajResultsControls = document.getElementById('hajResultsControls');
-
-        if (result.error) {
-            hajResults.innerHTML = `<p class="text-danger">${sanitize(result.error)}</p>`;
-            toastr.warning('لم يتم العثور على بيانات الحجاج.');
-            hajResultsControls.style.display = 'none';
-        } else {
-            allHajData = result; // حفظ جميع البيانات
-            currentRowsPerPage = 10; // إعادة تعيين الصفوف الافتراضية
-            renderTable(); // عرض الجدول
-            hajResultsControls.style.display = 'flex'; // إظهار التحكم في الصفوف وزر التصدير
-        }
-    } catch (error) {
-        toastr.error(`حدث خطأ أثناء جلب بيانات الحجاج: ${error.message}`);
-    }
+function cacheResult(companyName, result) {
+    localStorage.setItem(`search_${companyName}`, JSON.stringify(result));
 }
 
 /**
- * عرض الجدول بناءً على عدد الصفوف المختار
+ * جلب النتيجة المخزنة مؤقتاً
  */
-function renderTable() {
-    const hajResults = document.getElementById('hajResults');
-    const dataToDisplay = allHajData.slice(0, currentRowsPerPage); // عرض عدد محدد من الصفوف
+function getCachedResult(companyName) {
+    const cached = localStorage.getItem(`search_${companyName}`);
+    return cached ? JSON.parse(cached) : null;
+}
 
-    hajResults.innerHTML = `
-        <table class="table table-bordered mt-4">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>رقم الجواز</th>
-                    <th>اسم الحاج</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${dataToDisplay.map((row, index) => `
-                    <tr>
-                        <td>${index + 1}</td>
-                        <td>${sanitize(row['رقم الجواز'])}</td>
-                        <td>${sanitize(row['اسم الحاج'])}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
+/**
+ * عرض النتيجة الدقيقة مع تأثير Fade-in
+ */
+function displayCompany(company) {
+    const resultsContainer = document.querySelector('.result-container');
+    resultsContainer.innerHTML = `
+        <div class="result-card text-center shadow-lg transition-transform transform hover:scale-105 m-auto" data-aos="fade-up">
+            <div class="card-header">
+                <h3 class="text-blue-700 text-2xl font-semibold">${sanitize(company.name)}</h3>
+            </div>
+            <div class="card-body">
+                <p><i class="fas fa-map-marker-alt text-blue-500"></i> <strong>العنوان:</strong> ${sanitize(company.address)}</p>
+                <p><i class="fas fa-suitcase text-blue-500"></i> <strong>النشاط:</strong> ${sanitize(company.activity)}</p>
+                <p><i class="fas fa-chart-pie text-blue-500"></i> <strong>حصة الحج:</strong> ${sanitize(company.hajjQuota)}</p>
+                <p><i class="fas fa-envelope text-blue-500"></i> <strong>البريد الإلكتروني:</strong> <a href="mailto:${sanitize(company.email)}" class="text-blue-600">${sanitize(company.email)}</a></p>
+                <p><i class="fas fa-phone-alt text-blue-500"></i> <strong>رقم التواصل:</strong> <a href="tel:${sanitize(company.contact)}" class="text-blue-600">${sanitize(company.contact)}</a></p>
+            </div>
+            <div class="card-footer text-center mt-4">
+                <button class="btn btn-primary bg-gradient-to-r from-blue-500 to-blue-700 text-white py-2 px-4 rounded-lg shadow-md hover:scale-105 transform transition-transform">
+                    <i class="fas fa-envelope"></i> إرسال بريد
+                </button>
+                <button class="btn btn-secondary bg-gradient-to-r from-gray-400 to-gray-600 text-white py-2 px-4 rounded-lg shadow-md hover:scale-105 transform transition-transform">
+                    <i class="fas fa-phone-alt"></i> اتصال
+                </button>
+            </div>
+        </div>
     `;
 }
 
 /**
- * تحديث عدد الصفوف عند تغيير الخيار
+ * تمكين ميزة الاقتراحات التلقائية
  */
-function updateTableRows() {
-    const rowsPerPageSelect = document.getElementById('rowsPerPage');
-    currentRowsPerPage = parseInt(rowsPerPageSelect.value, 10); // تحديث عدد الصفوف المحدد
-    renderTable(); // إعادة عرض الجدول
-}
+async function enableAutocomplete() {
+    try {
+        const response = await fetch(`${API_URL}?getCompanies=true&limit=10`);
+        if (!response.ok) {
+            throw new Error(`خطأ في الاتصال بالسيرفر. الحالة: ${response.status}`);
+        }
 
-/**
- * تصدير البيانات إلى Excel
- */
-function exportToExcel() {
-    const hajResults = document.getElementById('hajResults');
-    if (!hajResults.querySelector('table')) {
-        toastr.warning('لا توجد بيانات لتصديرها.');
-        return;
+        const companies = await response.json();
+        if (Array.isArray(companies)) {
+            $("#searchInput").autocomplete({
+                source: companies
+            });
+        }
+    } catch (error) {
+        console.error("Error fetching companies for autocomplete:", error);
     }
-
-    const table = hajResults.querySelector('table');
-    const wb = XLSX.utils.table_to_book(table, { sheet: "الحجاج" });
-    XLSX.writeFile(wb, `بيانات_الحجاج.xlsx`);
-}
-
-/**
- * تصدير البيانات إلى PDF
- */
-function exportToPDF() {
-    const hajResults = document.getElementById('hajResults');
-    if (!hajResults.querySelector('table')) {
-        toastr.warning('لا توجد بيانات لتصديرها.');
-        return;
-    }
-
-    const table = hajResults.querySelector('table');
-    const pdf = new jsPDF();
-    pdf.autoTable({ html: table });
-    pdf.save(`بيانات_الحجاج.pdf`);
 }
 
 /**
