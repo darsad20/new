@@ -53,31 +53,33 @@ async function searchCompany() {
     showProgressBar();
 
     try {
-        const API_URL = `https://script.google.com/macros/s/AKfycbwk2SLayWu8b8dryXNha3lWUoO8YwT1v_gtyG997YbYaH7R1pNMEdIYJMv17wm0GSRWZA/exec?companyName=${encodeURIComponent(searchInput)}`;
+        const API_URL = "https://script.google.com/macros/s/AKfycbzyNDbip5gjjBeidhr0-NEW6uxMkZc-VwaLybeEb5bPUS5jpCuaaZFSWaAQIj5O5uj6Hg/exec";
         
-        const response = await fetch(API_URL);
-        if (!response.ok) throw new Error('فشل الاتصال بالخادم.');
+        const response = await fetch(`${API_URL}?companyName=${encodeURIComponent(searchInput)}`);
+        if (!response.ok) {
+            throw new Error(`HTTP Error! Status: ${response.status}`);
+        }
 
         const result = await response.json();
         document.getElementById('progressBar').style.display = 'none';
 
-        if (!result || result.error) {
-            document.getElementById('results').innerHTML = '<p>لا توجد نتائج مطابقة.</p>';
+        if (result.error) {
+            document.getElementById('results').innerHTML = `<p>${sanitize(result.error)}</p>`;
             toastr.warning('لم يتم العثور على نتائج.');
-            return;
+        } else {
+            document.getElementById('results').innerHTML = `
+                <div class="result-card">
+                    <h3>${sanitize(result.name)}</h3>
+                    <p><i class="fas fa-envelope"></i> البريد الإلكتروني: ${sanitize(result.email)}</p>
+                    <p><i class="fas fa-map-marker-alt"></i> المحافظة: ${sanitize(result.province)}</p>
+                    <p><i class="fas fa-chart-pie"></i> الحصة: ${sanitize(result.quota || "غير محددة")}</p>
+                    <p><i class="fas fa-phone-alt"></i> رقم التواصل: ${sanitize(result.contact || "غير متوفر")}</p>
+                </div>
+            `;
         }
-
-        // عرض البيانات
-        document.getElementById('results').innerHTML = `
-            <div class="result-card">
-                <h3>${sanitize(result.name)}</h3>
-                <p><i class="fas fa-envelope"></i> البريد الإلكتروني: ${sanitize(result.email)}</p>
-                <p><i class="fas fa-map-marker-alt"></i> الموقع: ${sanitize(result.province)}</p>
-            </div>
-        `;
     } catch (error) {
         document.getElementById('progressBar').style.display = 'none';
-        toastr.error('حدث خطأ أثناء جلب البيانات.');
+        toastr.error(`حدث خطأ: ${error.message}`);
         console.error('Error:', error);
     }
 }
