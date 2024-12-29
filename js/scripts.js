@@ -1,11 +1,10 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbwzh4x-KGImuO0M_ckXGi9iCfBpBd4KpL1x2DNBmJRZRdVH2CMx8dT78otNIhpnBmoWug/exec";
+const SECRET_KEY = "your-secret-key"; // استبدلها بمفتاح قوي وسري
 let controller;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // تفعيل ميزة الاقتراحات التلقائية
     enableAutocomplete();
 
-    // البحث عند الضغط على Enter
     const searchInput = document.getElementById('searchInput');
     searchInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
@@ -14,12 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-/**
- * إعادة تعيين الحقول
- */
 function resetSearch() {
     document.getElementById('searchInput').value = '';
-    document.querySelector('.result-container').innerHTML = ''; // مسح النتائج السابقة
+    document.querySelector('.result-container').innerHTML = '';
     document.getElementById('loadingBarContainer').style.display = 'none';
     document.getElementById('loadingSpinner').style.display = 'none';
     document.getElementById('noResultsMessage').style.display = 'none';
@@ -29,13 +25,10 @@ function resetSearch() {
     }
 }
 
-/**
- * عرض شريط التحميل
- */
 function showLoadingBar() {
     const loadingBarContainer = document.getElementById('loadingBarContainer');
     const loadingBar = document.getElementById('loadingBar');
-    loadingBarContainer.style.display = 'block'; // عرض الشريط
+    loadingBarContainer.style.display = 'block';
     loadingBar.style.width = '0%';
 
     let width = 0;
@@ -43,15 +36,12 @@ function showLoadingBar() {
         if (width >= 90) {
             clearInterval(interval);
         } else {
-            width += 2; // زيادة سريعة في البداية حتى تصل إلى 90%
+            width += 2;
             loadingBar.style.width = `${width}%`;
         }
     }, 50);
 }
 
-/**
- * إكمال شريط التحميل عند انتهاء التحميل
- */
 function completeLoadingBar() {
     const loadingBar = document.getElementById('loadingBar');
     loadingBar.style.width = '100%';
@@ -60,23 +50,14 @@ function completeLoadingBar() {
     }, 500);
 }
 
-/**
- * إظهار رسالة "جاري التحميل"
- */
 function showLoadingMessage() {
     document.getElementById('loadingSpinner').classList.remove('hidden');
 }
 
-/**
- * إخفاء رسالة "جاري التحميل"
- */
 function hideLoadingMessage() {
     document.getElementById('loadingSpinner').classList.add('hidden');
 }
 
-/**
- * البحث عن المنشأة مع إمكانية التخزين المؤقت
- */
 async function searchCompany() {
     const searchInput = document.getElementById('searchInput').value.trim();
     if (!searchInput) {
@@ -84,7 +65,6 @@ async function searchCompany() {
         return;
     }
 
-    // التحقق من التخزين المؤقت
     const cachedResult = getCachedResult(searchInput);
     if (cachedResult) {
         displayCompany(cachedResult);
@@ -142,37 +122,31 @@ async function searchCompany() {
     }
 }
 
-/**
- * تخزين نتيجة البحث في التخزين المؤقت
- */
 function cacheResult(companyName, result) {
-    localStorage.setItem(`search_${companyName}`, JSON.stringify(result));
+    const encryptedResult = CryptoJS.AES.encrypt(JSON.stringify(result), SECRET_KEY).toString();
+    localStorage.setItem(`search_${companyName}`, encryptedResult);
 }
 
-/**
- * جلب النتيجة المخزنة مؤقتاً
- */
 function getCachedResult(companyName) {
-    const cached = localStorage.getItem(`search_${companyName}`);
-    return cached ? JSON.parse(cached) : null;
+    const encrypted = localStorage.getItem(`search_${companyName}`);
+    if (!encrypted) return null;
+    const bytes = CryptoJS.AES.decrypt(encrypted, SECRET_KEY);
+    return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 }
 
-/**
- * عرض النتيجة الدقيقة مع تأثير Fade-in
- */
 function displayCompany(company) {
     const resultsContainer = document.querySelector('.result-container');
     resultsContainer.innerHTML = `
-        <div class="result-card text-center shadow-lg transition-transform transform hover:scale-105 m-auto" data-aos="fade-up">
+        <div class="result-card text-center shadow-lg transition-transform transform hover:scale-105 m-auto">
             <div class="card-header">
                 <h3 class="text-blue-700 text-2xl font-semibold">${sanitize(company.name)}</h3>
             </div>
             <div class="card-body">
-                <p><i class="fas fa-map-marker-alt text-blue-500"></i> <strong>العنوان:</strong> ${sanitize(company.address)}</p>
-                <p><i class="fas fa-suitcase text-blue-500"></i> <strong>النشاط:</strong> ${sanitize(company.activity)}</p>
-                <p><i class="fas fa-chart-pie text-blue-500"></i> <strong>حصة الحج:</strong> ${sanitize(company.hajjQuota)}</p>
-                <p><i class="fas fa-envelope text-blue-500"></i> <strong>البريد الإلكتروني:</strong> <a href="mailto:${sanitize(company.email)}" class="text-blue-600">${sanitize(company.email)}</a></p>
-                <p><i class="fas fa-phone-alt text-blue-500"></i> <strong>رقم التواصل:</strong> <a href="tel:${sanitize(company.contact)}" class="text-blue-600">${sanitize(company.contact)}</a></p>
+                <p><i class="fas fa-map-marker-alt text-blue-500"></i> <strong>العنوان:</strong> ${sanitize(company.address || "غير متوفر")}</p>
+                <p><i class="fas fa-suitcase text-blue-500"></i> <strong>النشاط:</strong> ${sanitize(company.activity || "غير متوفر")}</p>
+                <p><i class="fas fa-chart-pie text-blue-500"></i> <strong>حصة الحج:</strong> ${sanitize(company.hajjQuota || "غير متوفر")}</p>
+                <p><i class="fas fa-envelope text-blue-500"></i> <strong>البريد الإلكتروني:</strong> <a href="mailto:${sanitize(company.email || "")}" class="text-blue-600">${sanitize(company.email || "غير متوفر")}</a></p>
+                <p><i class="fas fa-phone-alt text-blue-500"></i> <strong>رقم التواصل:</strong> <a href="tel:${sanitize(company.contact || "")}" class="text-blue-600">${sanitize(company.contact || "غير متوفر")}</a></p>
             </div>
             <div class="card-footer text-center mt-4">
                 <button class="btn btn-primary bg-gradient-to-r from-blue-500 to-blue-700 text-white py-2 px-4 rounded-lg shadow-md hover:scale-105 transform transition-transform">
@@ -186,9 +160,6 @@ function displayCompany(company) {
     `;
 }
 
-/**
- * تمكين ميزة الاقتراحات التلقائية
- */
 async function enableAutocomplete() {
     try {
         const response = await fetch(`${API_URL}?getCompanies=true&limit=10`);
@@ -207,9 +178,6 @@ async function enableAutocomplete() {
     }
 }
 
-/**
- * تطهير النصوص لمنع هجمات XSS
- */
 function sanitize(input) {
     const temp = document.createElement('div');
     temp.textContent = input;
