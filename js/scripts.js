@@ -1,11 +1,12 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbwzh4x-KGImuO0M_ckXGi9iCfBpBd4KpL1x2DNBmJRZRdVH2CMx8dT78otNIhpnBmoWug/exec";
 let controller;
 
+// مفتاح التشفير
+const encryptionKey = "your-encryption-key";
+
 document.addEventListener('DOMContentLoaded', () => {
-    // تفعيل ميزة الاقتراحات التلقائية
     enableAutocomplete();
 
-    // البحث عند الضغط على Enter
     const searchInput = document.getElementById('searchInput');
     searchInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
@@ -15,11 +16,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * إعادة تعيين الحقول
+ * تطهير النصوص لمنع هجمات XSS
+ * @param {string} input - النص المراد تطهيره
+ * @returns {string} النص المطهر
  */
+function sanitize(input) {
+    const temp = document.createElement('div');
+    temp.textContent = input; // تعيين النص المراد تطهيره
+    return temp.innerHTML; // إرجاع النص بعد تطهيره
+}
+
 function resetSearch() {
     document.getElementById('searchInput').value = '';
-    document.querySelector('.result-container').innerHTML = ''; // مسح النتائج السابقة
+    document.querySelector('.result-container').innerHTML = '';
     document.getElementById('loadingBarContainer').style.display = 'none';
     document.getElementById('loadingSpinner').style.display = 'none';
     document.getElementById('noResultsMessage').style.display = 'none';
@@ -29,13 +38,10 @@ function resetSearch() {
     }
 }
 
-/**
- * عرض شريط التحميل
- */
 function showLoadingBar() {
     const loadingBarContainer = document.getElementById('loadingBarContainer');
     const loadingBar = document.getElementById('loadingBar');
-    loadingBarContainer.style.display = 'block'; // عرض الشريط
+    loadingBarContainer.style.display = 'block';
     loadingBar.style.width = '0%';
 
     let width = 0;
@@ -43,15 +49,12 @@ function showLoadingBar() {
         if (width >= 90) {
             clearInterval(interval);
         } else {
-            width += 2; // زيادة سريعة في البداية حتى تصل إلى 90%
+            width += 2;
             loadingBar.style.width = `${width}%`;
         }
     }, 50);
 }
 
-/**
- * إكمال شريط التحميل عند انتهاء التحميل
- */
 function completeLoadingBar() {
     const loadingBar = document.getElementById('loadingBar');
     loadingBar.style.width = '100%';
@@ -60,23 +63,14 @@ function completeLoadingBar() {
     }, 500);
 }
 
-/**
- * إظهار رسالة "جاري التحميل"
- */
 function showLoadingMessage() {
     document.getElementById('loadingSpinner').classList.remove('hidden');
 }
 
-/**
- * إخفاء رسالة "جاري التحميل"
- */
 function hideLoadingMessage() {
     document.getElementById('loadingSpinner').classList.add('hidden');
 }
 
-/**
- * البحث عن المنشأة مع إمكانية التخزين المؤقت
- */
 async function searchCompany() {
     const searchInput = document.getElementById('searchInput').value.trim();
     if (!searchInput) {
@@ -84,7 +78,6 @@ async function searchCompany() {
         return;
     }
 
-    // التحقق من التخزين المؤقت
     const cachedResult = getCachedResult(searchInput);
     if (cachedResult) {
         displayCompany(cachedResult);
@@ -142,24 +135,26 @@ async function searchCompany() {
     }
 }
 
-/**
- * تخزين نتيجة البحث في التخزين المؤقت
- */
 function cacheResult(companyName, result) {
-    localStorage.setItem(`search_${companyName}`, JSON.stringify(result));
+    const encryptedData = CryptoJS.AES.encrypt(JSON.stringify(result), encryptionKey).toString();
+    localStorage.setItem(`search_${companyName}`, encryptedData);
 }
 
-/**
- * جلب النتيجة المخزنة مؤقتاً
- */
 function getCachedResult(companyName) {
     const cached = localStorage.getItem(`search_${companyName}`);
-    return cached ? JSON.parse(cached) : null;
+    if (cached) {
+        try {
+            const bytes = CryptoJS.AES.decrypt(cached, encryptionKey);
+            const decryptedData = bytes.toString(CryptoJS.enc.Utf8);
+            return JSON.parse(decryptedData);
+        } catch (error) {
+            console.error('Error decrypting cached data:', error);
+            return null;
+        }
+    }
+    return null;
 }
 
-/**
- * عرض النتيجة الدقيقة مع تأثير Fade-in
- */
 function displayCompany(company) {
     const resultsContainer = document.querySelector('.result-container');
     resultsContainer.innerHTML = `
@@ -186,9 +181,6 @@ function displayCompany(company) {
     `;
 }
 
-/**
- * تمكين ميزة الاقتراحات التلقائية
- */
 async function enableAutocomplete() {
     try {
         const response = await fetch(`${API_URL}?getCompanies=true&limit=10`);
@@ -205,13 +197,4 @@ async function enableAutocomplete() {
     } catch (error) {
         console.error("Error fetching companies for autocomplete:", error);
     }
-}
-
-/**
- * تطهير النصوص لمنع هجمات XSS
- */
-function sanitize(input) {
-    const temp = document.createElement('div');
-    temp.textContent = input;
-    return temp.innerHTML;
 }
